@@ -19,11 +19,17 @@ ICONS = f"{DATA}/icons"
 
 # --- Personalización ---------------------------------------------------------
 BASE03, BASE3 = "0,43,54", "253,246,227"
-# acento: (rgb, texto sobre la selección)
+# nombre: {variante: (acento, fondo de la selección, texto seleccionado)}
+# El texto seleccionado debe leerse también sobre el fondo de la vista: con el estilo
+# Darkly, Dolphin resalta solo el ícono y el nombre queda fuera del resaltado.
+# Por eso: texto oscuro en Light, texto crema en Dark, y fondos que contrasten con él.
 ACENTOS = {
-    "Gris": ("101,123,131", BASE3),
-    "Cian": ("42,161,152", BASE03),
-    "Amarillo": ("181,137,0", BASE03),
+    "Gris": {"Light": ("101,123,131", "147,161,161", BASE03),
+             "Dark": ("101,123,131", "101,123,131", BASE3)},
+    "Cian": {"Light": ("42,161,152", "42,161,152", BASE03),
+             "Dark": ("33,126,119", "33,126,119", BASE3)},
+    "Amarillo": {"Light": ("181,137,0", "181,137,0", BASE03),
+                 "Dark": ("143,108,0", "143,108,0", BASE3)},
 }
 CARPETAS = {"amarillo": "#b58900", "azul": "#268bd2", "gris": "#657b83"}
 # ------------------------------------------------------------------------------
@@ -41,12 +47,15 @@ def buscar(*rutas):
     return None
 
 
-def recolorear(texto, acento, texto_sel):
+def recolorear(texto, acento, fondo_sel, texto_sel):
     texto = texto.replace(AZUL_ORIGINAL, acento)
 
     def seleccion(m):
-        b = re.sub(r"^ForegroundNormal=.*$", f"ForegroundNormal={texto_sel}", m.group(0), flags=re.M)
-        return re.sub(r"^ForegroundActive=.*$", f"ForegroundActive={texto_sel}", b, flags=re.M)
+        b = m.group(0)
+        for clave, valor in (("BackgroundNormal", fondo_sel), ("ForegroundNormal", texto_sel),
+                             ("ForegroundActive", texto_sel)):
+            b = re.sub(rf"^{clave}=.*$", f"{clave}={valor}", b, flags=re.M)
+        return b
 
     return re.sub(r"^\[Colors:Selection\]\n(?:(?!\[).*\n)*", seleccion, texto, flags=re.M)
 
@@ -55,8 +64,8 @@ def esquemas():
     os.makedirs(SCHEMES, exist_ok=True)
     for variante in ("Light", "Dark"):
         base = open(f"{AQUI}/schemes/BreezeSolarized{variante}.colors").read()
-        for nombre, (acc, fg) in ACENTOS.items():
-            out = recolorear(base, acc, fg)
+        for nombre, variantes in ACENTOS.items():
+            out = recolorear(base, *variantes[variante])
             out = re.sub(r"^Name=.*$", f"Name=Solarized {variante} · {nombre}", out, count=1, flags=re.M)
             open(f"{SCHEMES}/Solarized{variante}{nombre}.colors", "w").write(out)
     print(f"✓ esquemas de color: {len(ACENTOS) * 2}")
@@ -68,12 +77,12 @@ def estilos_plasma():
         print("· Plasma Style Darkly no encontrado: se omiten los estilos del panel")
         return
     oscuro = open(f"{AQUI}/schemes/BreezeSolarizedDark.colors").read()
-    for nombre, (acc, fg) in ACENTOS.items():
+    for nombre, variantes in ACENTOS.items():
         sid = "darkly-solarized" if nombre == "Gris" else f"darkly-solarized-{nombre.lower()}"
         dst = f"{STYLES}/{sid}"
         shutil.rmtree(dst, ignore_errors=True)
         shutil.copytree(darkly, dst, symlinks=True)
-        open(f"{dst}/colors", "w").write(recolorear(oscuro, acc, fg))
+        open(f"{dst}/colors", "w").write(recolorear(oscuro, *variantes["Dark"]))
         meta = json.load(open(f"{dst}/metadata.json"))
         k = meta["KPlugin"]
         k["Id"], k["Name"] = sid, f"Darkly Solarized · {nombre}"

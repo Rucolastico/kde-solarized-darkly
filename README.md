@@ -73,7 +73,8 @@ Después vuelve a aplicar otro esquema, Plasma Style y tema de íconos, por ejem
 ## Cómo funciona
 
 - **Panel oscuro con ventanas claras.** Un Plasma Style sin archivo `colors` hereda el esquema global; por eso Darkly se aclara junto con las ventanas. El generador clona Darkly y le da un `colors` fijo con la paleta Solarized Dark.
-- **Acentos.** Se cambia el azul `#268bd2` de los esquemas base por el acento elegido. El texto sobre la selección se ajusta para mantener el contraste: crema sobre el gris, oscuro sobre el cian y el amarillo.
+- **Acentos.** Se cambia el azul `#268bd2` de los esquemas base por el acento elegido.
+- **Texto seleccionado.** Con el estilo de aplicación Darkly, Dolphin resalta solo el ícono y deja el nombre fuera del resaltado. Por eso el texto seleccionado tiene que leerse también sobre el fondo de la vista: es oscuro en las variantes Light y crema en las Dark. Los fondos de selección se ajustan para que ese texto mantenga al menos 4.5:1 de contraste: gris claro `#93a1a1` en Light · Gris, y cian y amarillo oscurecidos en las variantes Dark.
 - **Carpetas.** Breeze pinta las carpetas con `ColorScheme-Accent`. Las variantes copian los íconos de `places/` con el color fijo y heredan todo lo demás de Breeze.
 - **Íconos de bandeja.** Usan la clase `ColorScheme-Text` para que Plasma los recoloree. El tema necesita `FollowsColorScheme=true` en su `index.theme`; sin esa línea Plasma no recolorea ningún ícono.
 

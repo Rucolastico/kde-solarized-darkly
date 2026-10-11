@@ -2,7 +2,8 @@
 """Genera las variantes Solarized para KDE Plasma 6.
 
   Esquemas de color:  ~/.local/share/color-schemes/Solarized{Light,Dark}{Gris,Cian,Amarillo}.colors
-  Plasma Style:       ~/.local/share/plasma/desktoptheme/darkly-solarized[-cian|-amarillo]
+  Plasma Style:       ~/.local/share/plasma/desktoptheme/darkly-solarized[-claro][-cian|-amarillo]
+                      (panel oscuro, o claro con -claro)
   Íconos:             ~/.local/share/icons/breeze-solarized             (íconos de bandeja)
                       ~/.local/share/icons/breeze-solarized-{amarillo,azul,gris}  (carpetas)
 
@@ -19,12 +20,14 @@ ICONS = f"{DATA}/icons"
 
 # --- Personalización ---------------------------------------------------------
 BASE03, BASE3 = "0,43,54", "253,246,227"
-# nombre: {variante: (acento, fondo de la selección, texto seleccionado)}
+# nombre: {variante: (acento, fondo de la selección, texto seleccionado[, hover])}
 # El texto seleccionado debe leerse también sobre el fondo de la vista: con el estilo
 # Darkly, Dolphin resalta solo el ícono y el nombre queda fuera del resaltado.
 # Por eso: texto oscuro en Light, texto crema en Dark, y fondos que contrasten con él.
+# hover: Darkly lo pinta semitransparente sobre el fondo; si es tan oscuro como el texto
+# (base00 en Gris Light) lo apaga, así que ahí se usa base1.
 ACENTOS = {
-    "Gris": {"Light": ("101,123,131", "147,161,161", BASE03),
+    "Gris": {"Light": ("101,123,131", "197,200,190", BASE03, "147,161,161"),
              "Dark": ("101,123,131", "101,123,131", BASE3)},
     "Cian": {"Light": ("42,161,152", "42,161,152", BASE03),
              "Dark": ("33,126,119", "33,126,119", BASE3)},
@@ -47,8 +50,10 @@ def buscar(*rutas):
     return None
 
 
-def recolorear(texto, acento, fondo_sel, texto_sel):
+def recolorear(texto, acento, fondo_sel, texto_sel, hover=None):
     texto = texto.replace(AZUL_ORIGINAL, acento)
+    if hover:
+        texto = re.sub(r"^DecorationHover=.*$", f"DecorationHover={hover}", texto, flags=re.M)
 
     def seleccion(m):
         b = m.group(0)
@@ -76,20 +81,24 @@ def estilos_plasma():
     if not darkly:
         print("· Plasma Style Darkly no encontrado: se omiten los estilos del panel")
         return
-    oscuro = open(f"{AQUI}/schemes/BreezeSolarizedDark.colors").read()
-    for nombre, variantes in ACENTOS.items():
-        sid = "darkly-solarized" if nombre == "Gris" else f"darkly-solarized-{nombre.lower()}"
-        dst = f"{STYLES}/{sid}"
-        shutil.rmtree(dst, ignore_errors=True)
-        shutil.copytree(darkly, dst, symlinks=True)
-        open(f"{dst}/colors", "w").write(recolorear(oscuro, *variantes["Dark"]))
-        meta = json.load(open(f"{dst}/metadata.json"))
-        k = meta["KPlugin"]
-        k["Id"], k["Name"] = sid, f"Darkly Solarized · {nombre}"
-        for clave in [c for c in k if c.startswith(("Name[", "Description["))]:
-            del k[clave]
-        json.dump(meta, open(f"{dst}/metadata.json", "w"), indent=4, ensure_ascii=False)
-    print(f"✓ Plasma Styles: {len(ACENTOS)} (desde {darkly})")
+    hechos = 0
+    for variante, sufijo, titulo in (("Dark", "", "Darkly Solarized"),
+                                     ("Light", "-claro", "Darkly Solarized Claro")):
+        base = open(f"{AQUI}/schemes/BreezeSolarized{variante}.colors").read()
+        for nombre, variantes in ACENTOS.items():
+            sid = f"darkly-solarized{sufijo}" + ("" if nombre == "Gris" else f"-{nombre.lower()}")
+            dst = f"{STYLES}/{sid}"
+            shutil.rmtree(dst, ignore_errors=True)
+            shutil.copytree(darkly, dst, symlinks=True)
+            open(f"{dst}/colors", "w").write(recolorear(base, *variantes[variante]))
+            meta = json.load(open(f"{dst}/metadata.json"))
+            k = meta["KPlugin"]
+            k["Id"], k["Name"] = sid, f"{titulo} · {nombre}"
+            for clave in [c for c in k if c.startswith(("Name[", "Description["))]:
+                del k[clave]
+            json.dump(meta, open(f"{dst}/metadata.json", "w"), indent=4, ensure_ascii=False)
+            hechos += 1
+    print(f"✓ Plasma Styles: {hechos} (desde {darkly})")
 
 
 def iconos_bandeja(apps):
@@ -134,6 +143,7 @@ def iconos_bandeja(apps):
         'class="ColorScheme-Text"/>' + lineas + puntos +
         f'<circle cx="{cx}" cy="{cy}" r="1.6" fill="currentColor" class="ColorScheme-Text"/></svg>')
     hechos.append("SyncThingy")
+
     return hechos
 
 
@@ -208,5 +218,6 @@ if __name__ == "__main__":
         iconos()
         print("\nAplica una combinación desde Configuración del sistema o con:\n"
               "  plasma-apply-colorscheme SolarizedLightGris\n"
-              "  plasma-apply-desktoptheme darkly-solarized\n"
+              "  plasma-apply-desktoptheme darkly-solarized        # panel oscuro\n"
+              "  plasma-apply-desktoptheme darkly-solarized-claro  # panel claro\n"
               "  /usr/libexec/plasma-changeicons breeze-solarized-amarillo")

@@ -144,6 +144,18 @@ def iconos_bandeja(apps):
         f'<circle cx="{cx}" cy="{cy}" r="1.6" fill="currentColor" class="ColorScheme-Text"/></svg>')
     hechos.append("SyncThingy")
 
+    # qBittorrent: mismo logo con la paleta Solarized (azul a cian, letras crema)
+    colores = {"#72b4f5": "#2aa198", "#356ebf": "#268bd2", "#daefff": "#eee8d5",
+               "#fff": "#fdf6e3", "#c8e8ff": "#eee8d5"}
+    for fn in ["apps/qbittorrent.svg", "status/qbittorrent-tray.svg"]:
+        src = f"/usr/share/icons/hicolor/scalable/{fn}"
+        if not os.path.exists(src):
+            continue
+        svg = re.sub(r'"(#[0-9a-fA-F]{3,6})"',
+                     lambda m: f'"{colores.get(m.group(1).lower(), m.group(1))}"', open(src).read())
+        open(os.path.join(apps, os.path.basename(fn)), "w").write(svg)
+        if "qBittorrent" not in hechos:
+            hechos.append("qBittorrent")
     return hechos
 
 
